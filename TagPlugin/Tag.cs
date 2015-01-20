@@ -9,6 +9,7 @@ using System.Data;
 using System.Text.RegularExpressions;
 
 using PRoCon.Core;
+using PRoCon.Core.Players;
 using PRoCon.Core.Plugin;
 #endregion
 
@@ -51,6 +52,8 @@ namespace PRoConEvents
 		//private String debugLevelString = "1";
 		private int debugLevel = 1;
 
+		private double endRoundDelay = 15.0;
+
 		#endregion
 
 		#region pluginDescribers  //Tag(), GetPluginName(), GetPluginVersion(), GetPluginAuthor(), GetPluginWebsite(), GetPluginDescription()
@@ -67,12 +70,12 @@ namespace PRoConEvents
 
 		public string GetPluginVersion()
 		{
-			return "1.7.0";
+			return "1.8.0";
 		}
 
 		public string GetPluginAuthor()
 		{
-			return "F0rceTen2112";
+			return "F0rceTen2112 and ra4king";
 		}
 
 		public string GetPluginWebsite()
@@ -327,6 +330,8 @@ namespace PRoConEvents
 
 				this.toChat("Your team won with " + timeChange(firstTeamTime / 1000) + " of having someone be \"it\" against their " + timeChange(secondTeamTime / 1000) + "!", firstTeamId);
 				this.toChat("Your team lost with " + timeChange(secondTeamTime / 1000) + " of having someone be \"it\" against their " + timeChange(firstTeamTime / 1000) + "!", secondTeamId);
+
+				new System.Threading.Thread((System.Threading.ThreadStart)delegate { endroundCountdown(firstTeamId); }).Start();
 			}
 			else if (this.firstTeamTime < this.secondTeamTime)
 			{
@@ -335,12 +340,16 @@ namespace PRoConEvents
 
 				this.toChat("Your team lost with " + timeChange(firstTeamTime / 1000) + " of having someone be \"it\" against their " + timeChange(secondTeamTime / 1000) + "!", firstTeamId);
 				this.toChat("Your team won with " + timeChange(secondTeamTime / 1000) + " of having someone be \"it\" against their " + timeChange(firstTeamTime / 1000) + "!", secondTeamId);
+
+				new System.Threading.Thread((System.Threading.ThreadStart)delegate { endroundCountdown(secondTeamId); }).Start();
 			}
 			else
 			{
 				this.yell("Holy god. You all managed to have equal times of " + timeChange(firstTeamTime / 1000) + ". Didn't even think that was remotely possible.");
 
 				this.toChat("Holy god. You all managed to have equal times of " + timeChange(firstTeamTime / 1000) + ". Didn't even think that was remotely possible.");
+
+				new System.Threading.Thread((System.Threading.ThreadStart)delegate { endroundCountdown(firstTeamId); }).Start();
 			}
 			this.toConsole(1, "Tag ended.");
 			this.recentTag = DateTime.UtcNow;
@@ -350,6 +359,26 @@ namespace PRoConEvents
 			this.firstTeamId = 0;
 			this.secondTeamId = 0;
 			this.it = new CPlayerInfo();
+		}
+
+		private void endroundCountdown(int winningTeamID)
+		{
+			double delay = this.endRoundDelay;
+			do
+			{
+				DateTime start = DateTime.Now;
+
+				try
+				{
+					System.Threading.Thread.Sleep((int)Math.Round(delay * 1000));
+				}
+				catch
+				{ }
+
+				delay -= (DateTime.Now - start).TotalSeconds;
+			} while (delay >= 0);
+
+			this.ExecuteCommand("procon.protected.send", "mapList.endRound", string.Concat(winningTeamID));
 		}
 
 		private void startGame(CPlayerInfo player)
@@ -774,6 +803,7 @@ namespace PRoConEvents
 			lstReturn.Add(new CPluginVariable("Settings|Yell Duration (s)", typeof(int), this.yellDuration));
 			lstReturn.Add(new CPluginVariable("Settings|Who's it message (m)", typeof(double), this.whosItTime));
 			lstReturn.Add(new CPluginVariable("Settings|How often to check for a win (s)", typeof(double), this.checkForWinPeriod));
+			lstReturn.Add(new CPluginVariable("Settings|End-of-Round Delay (s)", typeof(double), endRoundDelay));
 			return lstReturn;
 		}
 
@@ -964,6 +994,10 @@ namespace PRoConEvents
 				{
 					this.started = enumBoolYesNo.No;
 				}
+			}
+			else if (strVariable.Contains("End-of-Round Delay"))
+			{
+				endRoundDelay = double.Parse(strValue);
 			}
 		}
 
