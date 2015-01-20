@@ -1,0 +1,7 @@
+*.sln
+*.suo
+*.csproj
+TagPlugin/bin/
+TagPlugin/obj/
+TagPlugin/Properties/
+
